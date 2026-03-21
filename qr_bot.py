@@ -1,54 +1,48 @@
-import io
 import logging
-from aiogram import Bot, Dispatcher, F
+import io
+from PIL import Image
+from pyzbar.pyzbar import decode
+from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
 from aiogram.filters import Command
-from pyzbar.pyzbar import decode
-from PIL import Image
 
 API_TOKEN = "8500629637:AAGxsJbngLUu8hIi-BYBYThdayzy36Cfan4"
 
-# Логирование
+# Включаем логирование
 logging.basicConfig(level=logging.INFO)
 
-# Создаём бота и диспетчер
+# Инициализация бота и диспетчера
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
 # Команда /start
-@dp.message(Command("start"))
-async def start_handler(message: Message):
-    await message.answer("Привет! Отправь мне фото с QR или штрихкодом, и я расшифрую его.")
+@dp.message(Command(commands=["start"]))
+async def cmd_start(message: Message):
+    await message.answer("Привет! Отправь мне фото с QR или штрихкодом, я расшифрую его.")
 
-# Обработчик фото
-@dp.message(F.photo)
+# Обработка фото
+@dp.message(types.ContentType.PHOTO)
 async def handle_photo(message: Message):
-    # Берём фото с наибольшим разрешением
+    # Берём лучшее качество фото (последний вариант)
     photo = message.photo[-1]
-    
-    # Загружаем в память
-    photo_bytes = io.BytesIO()
-    await photo.download(destination_file=photo_bytes)
+    photo_bytes = await photo.download(destination=io.BytesIO())
     photo_bytes.seek(0)
+    img = Image.open(photo_bytes)
 
-    # Открываем и конвертируем в RGB
-    image = Image.open(photo_bytes).convert("RGB")
+    # Декодируем QR и штрихкоды
+    decoded_objects = decode(img)
 
-    # Декодируем QR/штрихкоды
-    codes = decode(image)
-    logging.info(f"Найденные коды: {codes}")
+    if not decoded_objects:
+        await message.answer("Не удалось распознать QR или штрихкод.")
+        return
 
-    # Формируем ответ
-    if codes:
-        response = "\n".join([f"Тип: {c.type}, Данные: {c.data.decode('utf-8')}" for c in codes])
-    else:
-        response = "Коды не найдены."
+    response = ""
+    for obj in decoded_objects:
+        response += f"Тип: {obj.type}\nДанные: {obj.data.decode('utf-8')}\n\n"
 
-    await message.answer(response)
+    await message.answer(response.strip())
 
 # Запуск бота
 if __name__ == "__main__":
     import asyncio
-    from aiogram import executor
-
-    executor.start_polling(dp, skip_updates=True)
+    asyncio.run(dp.start_polling(bot, skip_updates=True))
