@@ -6,7 +6,7 @@ from pyzbar.pyzbar import decode
 from PIL import Image
 import os
 
-API_TOKEN = "ВАШ_ТОКЕН"
+API_TOKEN = "8500629637:AAGxsJbngLUu8hIi-BYBYThdayzy36Cfan4"
 
 # Создаем папку для загруженных фото
 os.makedirs("downloads", exist_ok=True)
