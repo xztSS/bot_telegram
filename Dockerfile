@@ -1,22 +1,22 @@
+# Базовый образ Python
 FROM python:3.11-slim
 
-# Устанавливаем zbar для pyzbar
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    zbar-tools \
+# Устанавливаем зависимости для pyzbar и Pillow
+RUN apt-get update && apt-get install -y \
     libzbar0 \
-    libjpeg-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libjpeg62-turbo-dev \
+    zlib1g-dev \
+ && rm -rf /var/lib/apt/lists/*
 
-# Создаем рабочую папку
+# Рабочая директория
 WORKDIR /app
 
-# Копируем проект
-COPY . .
+# Копируем файлы проекта
+COPY requirements.txt .
+COPY qr_bot.py .
 
-# Устанавливаем зависимости
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+# Устанавливаем зависимости Python
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Запуск бота
 CMD ["python", "qr_bot.py"]
