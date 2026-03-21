@@ -6,7 +6,8 @@ from aiogram.utils import executor
 from pyzbar.pyzbar import decode
 from PIL import Image
 
-API_TOKEN = os.environ.get("API_TOKEN")  # токен берётся из переменной окружения
+# Токен берём из переменной окружения
+API_TOKEN = os.environ.get("API_TOKEN")
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
