@@ -1,38 +1,44 @@
 import os
-import requests
-import tempfile
-from pyzxing import BarCodeReader
 from aiogram import Bot, Dispatcher, types
-from aiogram.utils import executor
+from aiogram.types import InputFile
+from aiogram.filters import Command
+from pyzbar.pyzbar import decode
+from PIL import Image
+import io
 
+# Получаем токен из переменной окружения
 API_TOKEN = os.getenv("API_TOKEN")
 
+if not API_TOKEN:
+    raise ValueError("API_TOKEN не задан! Установи переменную окружения.")
+
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher()
 
-reader = BarCodeReader()
+# Команда /start
+@dp.message(Command("start"))
+async def start(message: types.Message):
+    await message.answer("Привет! Пришли мне фото с QR или штрихкодом, я его прочитаю.")
 
-@dp.message_handler(content_types=['photo'])
-async def scan_barcode(message: types.Message):
-    photo = message.photo[-1]
-    file_info = await bot.get_file(photo.file_id)
-    file_path = file_info.file_path
-    url = f'https://api.telegram.org/file/bot{API_TOKEN}/{file_path}'
-    
-    # Сохраняем временно
-    response = requests.get(url)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
-        tmp_file.write(response.content)
-        tmp_filename = tmp_file.name
+# Обработка фото
+@dp.message(types.ContentType.PHOTO)
+async def handle_photo(message: types.Message):
+    photo = message.photo[-1]  # Берём фото с наибольшим разрешением
+    file = await bot.download(photo.file_id)
+    img = Image.open(file)
+    codes = decode(img)
 
-    try:
-        result = reader.decode(tmp_filename)
-        if result:
-            await message.reply(f"Распознано:\n{result}")
-        else:
-            await message.reply("QR/штрихкод не найден")
-    finally:
-        os.remove(tmp_filename)
+    if not codes:
+        await message.answer("Код не найден. Попробуй другое фото.")
+        return
 
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+    result_text = "\n".join([f"{c.type}: {c.data.decode('utf-8')}" for c in codes])
+    await message.answer(f"Распознано:\n{result_text}")
+
+# Запуск бота
+if __name__ == "__main__":
+    import asyncio
+    from aiogram import F
+    from aiogram.utils import executor
+
+    asyncio.run(dp.start_polling(bot))
