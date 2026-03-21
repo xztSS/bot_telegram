@@ -2,3 +2,5 @@ aiogram==2.25.1
 pyzbar
 pillow
 requests
+opencv-python-headless
+pyzxing
