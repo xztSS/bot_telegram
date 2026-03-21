@@ -1,22 +1,38 @@
-import cv2
-from pyzxing import BarCodeReader
 import os
 import requests
 import tempfile
+from pyzxing import BarCodeReader
+from aiogram import Bot, Dispatcher, types
+from aiogram.utils import executor
+
+API_TOKEN = os.getenv("API_TOKEN")
+
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher(bot)
 
 reader = BarCodeReader()
 
-# Загрузка картинки
-url = "https://example.com/file.png"
-response = requests.get(url)
+@dp.message_handler(content_types=['photo'])
+async def scan_barcode(message: types.Message):
+    photo = message.photo[-1]
+    file_info = await bot.get_file(photo.file_id)
+    file_path = file_info.file_path
+    url = f'https://api.telegram.org/file/bot{API_TOKEN}/{file_path}'
+    
+    # Сохраняем временно
+    response = requests.get(url)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
+        tmp_file.write(response.content)
+        tmp_filename = tmp_file.name
 
-with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
-    tmp_file.write(response.content)
-    tmp_filename = tmp_file.name
-
-try:
-    results = reader.decode(tmp_filename)
-    print(results)
-finally:
-    if os.path.exists(tmp_filename):
+    try:
+        result = reader.decode(tmp_filename)
+        if result:
+            await message.reply(f"Распознано:\n{result}")
+        else:
+            await message.reply("QR/штрихкод не найден")
+    finally:
         os.remove(tmp_filename)
+
+if __name__ == '__main__':
+    executor.start_polling(dp, skip_updates=True)
