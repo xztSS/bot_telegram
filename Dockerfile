@@ -1,25 +1,22 @@
-# Используем официальный Python 3.11 slim
 FROM python:3.11-slim
 
-# Устанавливаем системные зависимости для pyzbar и Pillow
-RUN apt-get update && apt-get install -y \
+# Устанавливаем zbar для pyzbar
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    zbar-tools \
     libzbar0 \
-    libzbar-dev \
     libjpeg-dev \
-    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Создаем рабочую директорию
+# Создаем рабочую папку
 WORKDIR /app
 
-# Копируем requirements, если есть
-COPY requirements.txt .
-
-# Устанавливаем зависимости Python
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Копируем код бота
+# Копируем проект
 COPY . .
+
+# Устанавливаем зависимости
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
 # Запуск бота
 CMD ["python", "qr_bot.py"]
