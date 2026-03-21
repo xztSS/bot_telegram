@@ -6,7 +6,7 @@ from aiogram.utils import executor
 from pyzbar.pyzbar import decode
 from PIL import Image
 
-# Токен берём из переменной окружения
+# Получаем токен из переменной окружения
 API_TOKEN = os.environ.get("API_TOKEN")
 
 bot = Bot(token=API_TOKEN)
@@ -19,7 +19,7 @@ async def handle_file(message: types.Message):
     elif message.document:
         file_id = message.document.file_id
     else:
-        await message.reply("Пожалуйста, отправьте QR как фото или файл.")
+        await message.reply("Пожалуйста, отправьте QR или штрихкод как фото или файл.")
         return
 
     file = await bot.get_file(file_id)
@@ -35,10 +35,14 @@ async def handle_file(message: types.Message):
         decoded_objects = decode(img)
 
         if decoded_objects:
-            results = "\n".join([obj.data.decode("utf-8") for obj in decoded_objects])
-            await message.reply(f"QR-код содержит:\n{results}")
+            results = []
+            for obj in decoded_objects:
+                type_name = obj.type  # QR_CODE, EAN13, CODE128 и т.д.
+                data = obj.data.decode("utf-8")
+                results.append(f"{type_name}: {data}")
+            await message.reply("Найдено:\n" + "\n".join(results))
         else:
-            await message.reply("QR-код не найден 😕")
+            await message.reply("QR или штрихкод не найден 😕")
     finally:
         if os.path.exists(tmp_filename):
             os.remove(tmp_filename)
