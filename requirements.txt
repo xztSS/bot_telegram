@@ -1,6 +1,4 @@
-aiogram==2.25.1
-pyzbar
-pillow
-requests
-opencv-python-headless
-pyzxing
+aiogram==3.1.0
+opencv-python-headless==4.8.0.74
+pyzbar==0.1.8
+Pillow==10.1.0
