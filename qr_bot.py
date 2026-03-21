@@ -2,7 +2,7 @@ import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import ContentType
 from aiogram.filters import Command
-from aiogram.utils.keyboard import ReplyKeyboardRemove
+from aiogram.types import ReplyKeyboardRemove
 from aiogram import F
 
 from io import BytesIO
