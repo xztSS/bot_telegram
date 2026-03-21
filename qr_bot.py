@@ -1,46 +1,61 @@
-import asyncio
+import logging
 from aiogram import Bot, Dispatcher, types
-from aiogram.filters import ContentType
-from aiogram.types import Message
-from pyzbar.pyzbar import decode
+from aiogram.types import ContentType
+from aiogram.filters import Command
+from aiogram.utils.keyboard import ReplyKeyboardRemove
+from aiogram import F
+
+from io import BytesIO
 from PIL import Image
-import os
+from pyzbar.pyzbar import decode
 
-API_TOKEN = "8500629637:AAGxsJbngLUu8hIi-BYBYThdayzy36Cfan4"
+API_TOKEN = "ВАШ_ТОКЕН_БОТА"
 
-# Создаем папку для загруженных фото
-os.makedirs("downloads", exist_ok=True)
+# Логирование
+logging.basicConfig(level=logging.INFO)
 
+# Инициализация бота и диспетчера
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-async def decode_qr_barcode(file_path: str) -> str:
-    """Декодирует QR и штрихкоды из изображения"""
-    try:
-        image = Image.open(file_path)
-        codes = decode(image)
-        if not codes:
-            return "Код не найден."
-        return "\n".join([f"{code.type}: {code.data.decode('utf-8')}" for code in codes])
-    except Exception as e:
-        return f"Ошибка при декодировании: {e}"
+async def extract_qr_from_photo(photo_bytes: bytes) -> str:
+    """Декодирует QR-код из изображения"""
+    image = Image.open(BytesIO(photo_bytes))
+    qr_codes = decode(image)
+    if qr_codes:
+        return qr_codes[0].data.decode("utf-8")
+    return None
 
-@dp.message_handler(content_types=ContentType.PHOTO)
-async def handle_photo(message: Message):
-    photo = message.photo[-1]  # берём наибольшее по размеру
-    file_info = await bot.get_file(photo.file_id)
-    file_path = f"downloads/{photo.file_id}.jpg"
-    await photo.download(destination=file_path)
+# Команда /start
+@dp.message(Command("start"))
+async def start_handler(message: types.Message):
+    await message.answer("Привет! Пришли фото с QR-кодом, и я его расшифрую.")
+
+# Обработка фото
+@dp.message(content_types=ContentType.PHOTO)
+async def photo_handler(message: types.Message):
+    # Получаем наибольшее изображение
+    photo = message.photo[-1]
+    photo_bytes = await photo.download(destination=BytesIO())
+    photo_bytes.seek(0)
     
-    result = await decode_qr_barcode(file_path)
-    await message.reply(result)
+    qr_text = await extract_qr_from_photo(photo_bytes.read())
+    
+    if qr_text:
+        await message.answer(f"QR-код расшифрован: {qr_text}")
+    else:
+        await message.answer("Не удалось найти QR-код на изображении.")
 
-@dp.message_handler(commands=["start"])
-async def start_cmd(message: Message):
-    await message.reply("Привет! Отправь мне фото с QR или штрихкодом, и я расшифрую его.")
-
-async def main():
-    await dp.start_polling(bot)
-
+# Запуск бота
 if __name__ == "__main__":
+    import asyncio
+    from aiogram import Dispatcher
+    
+    async def main():
+        try:
+            logging.info("Бот запущен...")
+            await dp.start_polling(bot)
+        finally:
+            await bot.session.close()
+
     asyncio.run(main())
