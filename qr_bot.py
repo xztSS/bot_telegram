@@ -5,7 +5,7 @@ from aiogram.filters import Command
 from pyzbar.pyzbar import decode
 from PIL import Image
 
-API_TOKEN = "ВАШ_API_ТОКЕН"  # замените на токен вашего бота
+API_TOKEN = "8500629637:AAGxsJbngLUu8hIi-BYBYThdayzy36Cfan4"  # замените на токен вашего бота
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
