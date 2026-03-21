@@ -1,21 +1,21 @@
-# --- Используем официальный Python ---
-FROM python:3.11-slim
+FROM python:3.11.11-slim
 
-# --- Обновление и установка зависимостей для pyzbar ---
-RUN apt-get update && apt-get install -y \
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libzbar0 \
     libjpeg62-turbo \
     && rm -rf /var/lib/apt/lists/*
 
-# --- Создаем рабочую директорию ---
 WORKDIR /app
 
-# --- Копируем файлы ---
-COPY requirements.txt .
-COPY qr_bot.py .
+COPY requirements.txt ./
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# --- Установка зависимостей ---
-RUN pip install --no-cache-dir -r requirements.txt
+COPY qr_bot.py ./
 
-# --- Запуск бота ---
+EXPOSE 8080
+
 CMD ["python", "qr_bot.py"]
