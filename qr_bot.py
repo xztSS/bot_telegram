@@ -9,7 +9,7 @@ from io import BytesIO
 from PIL import Image
 from pyzbar.pyzbar import decode
 
-API_TOKEN = "ВАШ_ТОКЕН_БОТА"
+API_TOKEN = "8500629637:AAGxsJbngLUu8hIi-BYBYThdayzy36Cfan4"
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
