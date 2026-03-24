@@ -3,7 +3,7 @@ from __future__ import annotations
 from aiogram import Bot, F, Router
 from aiogram.enums import ContentType
 from aiogram.filters import CommandStart
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardRemove
 
 from app.decoder import BarcodeDecoder, DecoderUnavailableError, InvalidImageError
 
@@ -15,6 +15,7 @@ def build_router(decoder: BarcodeDecoder) -> Router:
     async def cmd_start(message: Message) -> None:
         await message.answer(
             "Привет! Отправьте фото или файл с QR-кодом/штрихкодом, и я постараюсь его расшифровать.",
+            reply_markup=ReplyKeyboardRemove(),
         )
 
     @router.message(F.photo)
@@ -38,6 +39,7 @@ def build_router(decoder: BarcodeDecoder) -> Router:
         if message.content_type in {ContentType.TEXT, ContentType.STICKER, ContentType.VOICE, ContentType.VIDEO}:
             await message.answer(
                 "Я умею распознавать QR-коды и штрихкоды с изображений. Пришлите фото или файл с кодом.",
+                reply_markup=ReplyKeyboardRemove(),
             )
             return
 
