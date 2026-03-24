@@ -1,51 +1,43 @@
-import os
-from io import BytesIO
-from PIL import Image
-from pyzbar.pyzbar import decode
+from __future__ import annotations
+
+import asyncio
+import logging
 
 from aiogram import Bot, Dispatcher
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
-from aiogram.filters import ContentType
 
-API_TOKEN = os.getenv("API_TOKEN")
+from app.config import Settings
+from app.decoder import BarcodeDecoder
+from app.handlers import build_router
+from app.healthcheck import start_healthcheck_server
 
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
 
-# --- Клавиатура ---
-keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="Отправить фото")],
-    ],
-    resize_keyboard=True
-)
-
-# --- Старт команды ---
-@dp.message()
-async def cmd_start(message: Message):
-    await message.answer(
-        "Привет! Отправь мне фото с QR-кодом, и я расшифрую его.",
-        reply_markup=keyboard
+async def main() -> None:
+    settings = Settings.from_env()
+    logging.basicConfig(
+        level=getattr(logging, settings.log_level, logging.INFO),
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     )
 
-# --- Обработка фото ---
-@dp.message(ContentType.PHOTO)
-async def handle_photo(message: Message):
-    # Берем последнее фото (самое крупное)
-    photo = message.photo[-1]
-    file = await bot.download(photo.file_id)
-    
-    image = Image.open(BytesIO(file.read()))
-    qr_codes = decode(image)
+    bot = Bot(token=settings.api_token)
+    dispatcher = Dispatcher()
+    dispatcher.include_router(build_router(BarcodeDecoder()))
 
-    if qr_codes:
-        result = "\n".join([qr.data.decode() for qr in qr_codes])
-    else:
-        result = "QR-код не найден."
+    healthcheck_runner = None
+    if settings.enable_healthcheck:
+        healthcheck_runner = await start_healthcheck_server(settings.host, settings.port)
+        logging.getLogger(__name__).info(
+            "Healthcheck server started on %s:%s",
+            settings.host,
+            settings.port,
+        )
 
-    await message.answer(result, reply_markup=ReplyKeyboardRemove())
+    try:
+        await dispatcher.start_polling(bot)
+    finally:
+        await bot.session.close()
+        if healthcheck_runner is not None:
+            await healthcheck_runner.cleanup()
 
-# --- Основной запуск ---
+
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(dp.start_polling(bot))
+    asyncio.run(main())
